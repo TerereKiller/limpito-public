@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limpito · Ventas y costos</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#6b7280;--line:#e3e6ec;--pri:#1f6feb;--pri-tx:#fff;--ok:#12805c;--bad:#c2410c;--head:#eef1f6}
+@media(prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--tx:#e8ebf1;--mut:#9aa3b2;--line:#2a313d;--pri:#5b9dff;--pri-tx:#0b1220;--ok:#4ade9a;--bad:#fb923c;--head:#222936}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+header h1{font-size:18px;margin:0}
+header .mut{font-size:12px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 0;max-width:1100px;margin:0 auto}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit}
+nav button.on{background:var(--pri);color:var(--pri-tx);border-color:var(--pri)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 12px}h3{margin:0 0 12px}h4{margin:16px 0 8px}
+.mut{color:var(--mut)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}
+label.inl{flex-direction:row;align-items:center;gap:8px}
+input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--pri);outline-offset:-1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+.grid .wide{grid-column:span 2}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit}
+.btn.pri{background:var(--pri);color:var(--pri-tx);border-color:var(--pri);font-weight:600}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn.del{color:var(--bad)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.bar h2{margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--head);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tfoot td{font-weight:700;background:var(--head)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--mut)}
+.empty{padding:24px;text-align:center;color:var(--mut)}
+.warn{color:var(--bad);font-size:12px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--tx);width:min(560px,94vw);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog form{display:flex;flex-direction:column;gap:12px}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.line{display:grid;grid-template-columns:1fr 90px 50px 90px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.line .c{text-align:right;font-size:13px;color:var(--mut)}
+.line .x{border:0;background:none;color:var(--bad);cursor:pointer;font-size:16px}
+svg text{fill:var(--mut);font-size:11px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mut);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+@media(max-width:560px){.grid .wide{grid-column:span 1}.line{grid-template-columns:1fr 80px 40px 32px}.line .c{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Limpito · Ventas y costos</h1><div class="mut" id="respaldoInfo"></div></div>
+  <div class="tools">
+    <button class="btn sm" data-a="export">Descargar respaldo</button>
+    <button class="btn sm" data-a="import">Restaurar respaldo</button>
+    <button class="btn sm" data-a="csv">Ventas en CSV</button>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+<nav>
+  <button data-a="tab" data-v="ventas" class="on">Ventas</button>
+  <button data-a="tab" data-v="insumos">Materias primas</button>
+  <button data-a="tab" data-v="productos">Productos y recetas</button>
+  <button data-a="tab" data-v="resumen">Resumen</button>
+</nav>
+<main id="app"></main>
+<dialog id="dlg"></dialog>
+
+<script>
+const KEY='limpito_datos_v1', META='limpito_meta_v1';
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const CATS=['Materia prima','Envase','Tapa/Gatillo','Etiqueta/Sticker','Embalaje','Otros'];
+const UNIDADES=['g','kg','ml','L','unidad'];
+const $=(s,r=document)=>r.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+const fmt=n=>Math.round(n).toLocaleString('es-PY');
+const fmt2=n=>(+n).toLocaleString('es-PY',{maximumFractionDigits:2});
+const hoy=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const fdate=s=>s?s.split('-').reverse().join('/'):'';
+const cls=n=>n<0?'neg':'pos';
+
+/* ---------- Datos ---------- */
+let S=null;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!Array.isArray(S.productos)){
+  S={insumos:[],ventas:[],productos:['Suavizante','Apresto','Loción textil','Jabón líquido'].map(n=>({id:uid(),nombre:n,precio:0,receta:[]}))};
+}
+let meta={};try{meta=JSON.parse(localStorage.getItem(META))||{}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('No se pudo guardar en este navegador (¿modo privado o sin espacio?). Descargá un respaldo.')}}
+function saveMeta(){try{localStorage.setItem(META,JSON.stringify(meta))}catch(e){}}
+
+const insumo=id=>S.insumos.find(i=>i.id===id);
+const producto=id=>S.productos.find(p=>p.id===id);
+const costoIns=i=>i&&i.cantidad>0?i.precio/i.cantidad:0;
+const costoProd=p=>p.receta.reduce((a,l)=>a+l.cantidad*costoIns(insumo(l.insumoId)),0);
+
+/* ---------- Estado de vistas ---------- */
+let tab='ventas', mesFiltro=hoy().slice(0,7), anio=new Date().getFullYear(), busq='', catFiltro='';
+
+function setTab(t){
+  tab=t;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===t));
+  render();
+}
+function render(){({ventas:vVentas,insumos:vInsumos,productos:vProductos,resumen:vResumen})[tab]();updRespaldo()}
+function updRespaldo(){
+  $('#respaldoInfo').textContent=meta.ultimoRespaldo?'Último respaldo: '+fdate(meta.ultimoRespaldo):'Todavía no descargaste ningún respaldo';
+}
+
+/* ---------- Diálogo ---------- */
+function openDlg(html,onSubmit,onOpen){
+  const d=$('#dlg');
+  d.innerHTML=`<form>${html}<div class="acts"><button type="button" class="btn" id="cancel">Cancelar</button><button class="btn pri">Guardar</button></div></form>`;
+  $('#cancel',d).onclick=()=>d.close();
+  $('form',d).onsubmit=e=>{e.preventDefault();if(onSubmit(new FormData(e.target))!==false)d.close()};
+  if(onOpen)onOpen(d);
+  d.showModal();
+}
+
+/* ---------- VENTAS ---------- */
+function vVentas(){
+  const opts=S.productos.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  if(!S.productos.length){$('#app').innerHTML='<div class="card empty">Primero creá al menos un producto en "Productos y recetas".</div>';return}
+  $('#app').innerHTML=`
+  <section class="card"><h2>Cargar venta</h2>
+    <form id="fVenta" class="grid">
+      <label>Fecha<input type="date" name="fecha" value="${hoy()}" required></label>
+      <label>Producto<select name="producto">${opts}</select></label>
+      <label>Cantidad<input type="number" name="cantidad" min="0" step="any" inputmode="decimal" required></label>
+      <label>Precio unitario (Gs)<input type="number" name="precio" min="0" step="any" inputmode="numeric" required></label>
+      <label class="wide">Nota (opcional)<input name="nota" placeholder="Cliente, observación…"></label>
+      <button class="btn pri">Agregar venta</button>
+    </form>
+  </section>
+  <section class="card">
+    <div class="bar"><h2>Ventas del período</h2>
+      <label class="inl">Mes <input type="month" id="mes" value="${mesFiltro}"></label></div>
+    <div id="vTabla"></div>
+  </section>`;
+  const f=$('#fVenta');
+  const sync=()=>{const p=producto(f.producto.value);f.precio.value=p&&p.precio?p.precio:''};
+  sync();
+  f.producto.onchange=sync;
+  f.onsubmit=e=>{
+    e.preventDefault();
+    const p=producto(f.producto.value);
+    const cant=num(f.cantidad.value);
+    if(!p||cant<=0){alert('Revisá producto y cantidad.');return}
+    S.ventas.push({id:uid(),fecha:f.fecha.value,productoId:p.id,cantidad:cant,precio:num(f.precio.value),costoUnit:costoProd(p),nota:f.nota.value.trim()});
+    save();
+    mesFiltro=f.fecha.value.slice(0,7);$('#mes').value=mesFiltro;
+    f.cantidad.value='';f.nota.value='';f.cantidad.focus();
+    tVentas();
+  };
+  $('#mes').oninput=e=>{mesFiltro=e.target.value;tVentas()};
+  tVentas();
+}
+function tVentas(){
+  const list=S.ventas.filter(v=>!mesFiltro||v.fecha.startsWith(mesFiltro)).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  let tv=0,tc=0,tu=0;
+  const rows=list.map(v=>{
+    const p=producto(v.productoId),tot=v.cantidad*v.precio,cos=v.cantidad*v.costoUnit;
+    tv+=tot;tc+=cos;tu+=v.cantidad;
+    return `<tr><td>${fdate(v.fecha)}</td><td>${p?esc(p.nombre):'(eliminado)'}</td><td class="n">${fmt2(v.cantidad)}</td><td class="n">${fmt(v.precio)}</td><td class="n">${fmt(tot)}</td><td class="n">${fmt(cos)}</td><td class="n ${cls(tot-cos)}">${fmt(tot-cos)}</td><td>${esc(v.nota)}</td>
+    <td><button class="btn sm" data-a="editVenta" data-id="${v.id}">Editar</button> <button class="btn sm del" data-a="delVenta" data-id="${v.id}">Borrar</button></td></tr>`}).join('');
+  $('#vTabla').innerHTML=list.length?`
+  <div class="kpis"><div class="kpi"><span>Ventas</span><b>${fmt(tv)} Gs</b></div><div class="kpi"><span>Costo</span><b>${fmt(tc)} Gs</b></div><div class="kpi"><span>Ganancia</span><b class="${cls(tv-tc)}">${fmt(tv-tc)} Gs</b></div><div class="kpi"><span>Unidades</span><b>${fmt2(tu)}</b></div></div>
+  <div class="wrap"><table><thead><tr><th>Fecha</th><th>Producto</th><th class="n">Cant.</th><th class="n">Precio</th><th class="n">Total</th><th class="n">Costo</th><th class="n">Ganancia</th><th>Nota</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+  :'<div class="empty">No hay ventas en este mes.</div>';
+}
+function dVenta(id){
+  const v=S.ventas.find(x=>x.id===id);if(!v)return;
+  openDlg(`<h3>Editar venta</h3>
+   <label>Fecha<input type="date" name="fecha" value="${v.fecha}" required></label>
+   <label>Producto<select name="producto">${S.productos.map(p=>`<option value="${p.id}" ${p.id===v.productoId?'selected':''}>${esc(p.nombre)}</option>`).join('')}</select></label>
+   <label>Cantidad<input type="number" name="cantidad" min="0" step="any" value="${v.cantidad}" required></label>
+   <label>Precio unitario (Gs)<input type="number" name="precio" min="0" step="any" value="${v.precio}" required></label>
+   <label>Costo unitario (Gs) — el de ese día<input type="number" name="costo" min="0" step="any" value="${+v.costoUnit.toFixed(2)}" required></label>
+   <label>Nota<input name="nota" value="${esc(v.nota)}"></label>`,
+  fd=>{v.fecha=fd.get('fecha');v.productoId=fd.get('producto');v.cantidad=num(fd.get('cantidad'));v.precio=num(fd.get('precio'));v.costoUnit=num(fd.get('costo'));v.nota=(fd.get('nota')||'').trim();save();tVentas()});
+}
+
+/* ---------- MATERIAS PRIMAS ---------- */
+function vInsumos(){
+  $('#app').innerHTML=`<section class="card">
+   <div class="bar"><h2>Materias primas y otros costos</h2>
+    <div class="tools"><input id="q" placeholder="Buscar…" value="${esc(busq)}">
+    <select id="cat"><option value="">Todas las categorías</option>${CATS.map(c=>`<option ${c===catFiltro?'selected':''}>${c}</option>`).join('')}</select>
+    <button class="btn pri" data-a="nuevoInsumo">+ Nuevo insumo</button></div></div>
+   <p class="mut" style="margin-top:-4px">Cargá todo lo que suma al costo: materia prima, botellas, tapas, stickers, cajas. Cuando cambie un precio, tocá "Editar" y actualizalo: los costos de los productos se recalculan solos.</p>
+   <div id="iTabla"></div></section>`;
+  $('#q').oninput=e=>{busq=e.target.value;tIns()};
+  $('#cat').onchange=e=>{catFiltro=e.target.value;tIns()};
+  tIns();
+}
+function tIns(){
+  const q=busq.trim().toLowerCase();
+  const list=S.insumos.filter(i=>(!catFiltro||i.categoria===catFiltro)&&(!q||(i.nombre+' '+i.proveedor).toLowerCase().includes(q))).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  $('#iTabla').innerHTML=list.length?`<div class="wrap"><table><thead><tr><th>Insumo</th><th>Categoría</th><th class="n">Compra</th><th class="n">Precio pagado</th><th class="n">Costo por unidad</th><th>Proveedor</th><th>Actualizado</th><th></th></tr></thead><tbody>${
+   list.map(i=>`<tr><td>${esc(i.nombre)}</td><td>${esc(i.categoria)}</td><td class="n">${fmt2(i.cantidad)} ${esc(i.unidad)}</td><td class="n">${fmt(i.precio)}</td><td class="n">${fmt2(costoIns(i))} / ${esc(i.unidad)}</td><td>${esc(i.proveedor)}</td><td>${fdate(i.fecha)}</td>
+   <td><button class="btn sm" data-a="editInsumo" data-id="${i.id}">Editar</button> <button class="btn sm del" data-a="delInsumo" data-id="${i.id}">Borrar</button></td></tr>`).join('')}</tbody></table></div>`
+   :`<div class="empty">${S.insumos.length?'Nada coincide con la búsqueda.':'Todavía no cargaste insumos. Empezá con "+ Nuevo insumo".'}</div>`;
+}
+function dInsumo(id){
+  const i=id?insumo(id):{nombre:'',categoria:CATS[0],unidad:'kg',cantidad:'',precio:'',proveedor:''};
+  openDlg(`<h3>${id?'Editar':'Nuevo'} insumo</h3>
+   <label>Nombre<input name="nombre" value="${esc(i.nombre)}" required placeholder="Ej: Texapón, Botella 1 L, Sticker suavizante"></label>
+   <label>Categoría<select name="categoria">${CATS.map(c=>`<option ${c===i.categoria?'selected':''}>${c}</option>`).join('')}</select></label>
+   <label>Unidad<select name="unidad">${UNIDADES.map(u=>`<option ${u===i.unidad?'selected':''}>${u}</option>`).join('')}</select></label>
+   <label>Cantidad que compraste<input name="cantidad" type="number" min="0" step="any" value="${i.cantidad}" required></label>
+   <label>Precio que pagaste por esa cantidad (Gs)<input name="precio" type="number" min="0" step="any" value="${i.precio}" required></label>
+   <label>Proveedor (opcional)<input name="proveedor" value="${esc(i.proveedor)}" placeholder="Ej: Chemical Center"></label>
+   <div class="mut" id="prev"></div>`,
+  fd=>{
+    const dup=S.insumos.find(x=>x.id!==id&&x.nombre.toLowerCase()===fd.get('nombre').trim().toLowerCase());
+    if(dup){alert('Ya existe un insumo con ese nombre.');return false}
+    const d={nombre:fd.get('nombre').trim(),categoria:fd.get('categoria'),unidad:fd.get('unidad'),cantidad:num(fd.get('cantidad')),precio:num(fd.get('precio')),proveedor:fd.get('proveedor').trim(),fecha:hoy()};
+    if(d.cantidad<=0){alert('La cantidad debe ser mayor a 0.');return false}
+    if(id)Object.assign(i,d);else S.insumos.push({id:uid(),...d});
+    save();render();
+  },
+  d=>{const f=$('form',d),p=$('#prev',d);const up=()=>{const c=num(f.cantidad.value),pr=num(f.precio.value);p.textContent=c>0?`Costo por ${f.unidad.value}: ${fmt2(pr/c)} Gs`:''};f.addEventListener('input',up);up()});
+}
+
+/* ---------- PRODUCTOS Y RECETAS ---------- */
+function vProductos(){
+  const list=[...S.productos].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  $('#app').innerHTML=`<section class="card"><div class="bar"><h2>Productos y recetas</h2><button class="btn pri" data-a="nuevoProd">+ Nuevo producto</button></div>
+  <p class="mut" style="margin-top:-4px">Cada producto lleva su receta: qué insumos usa y cuánto por unidad vendida (incluí botella, tapa y sticker). Con eso se calcula el costo y el margen.</p>
+  ${list.length?`<div class="wrap"><table><thead><tr><th>Producto</th><th class="n">Precio de venta</th><th class="n">Costo</th><th class="n">Ganancia</th><th class="n">Margen</th><th>Receta</th><th></th></tr></thead><tbody>${list.map(p=>{
+    const c=costoProd(p),g=p.precio-c;
+    return `<tr><td>${esc(p.nombre)}</td><td class="n">${fmt(p.precio)}</td><td class="n">${fmt(c)}</td><td class="n ${cls(g)}">${fmt(g)}</td><td class="n">${p.precio>0&&p.receta.length?fmt2(g/p.precio*100)+'%':'–'}</td>
+    <td>${p.receta.length?p.receta.length+' insumos':'<span class="warn">sin receta</span>'}</td>
+    <td><button class="btn sm" data-a="editProd" data-id="${p.id}">Editar</button> <button class="btn sm del" data-a="delProd" data-id="${p.id}">Borrar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Sin productos.</div>'}</section>`;
+}
+function dProd(id){
+  const p=id?producto(id):{nombre:'',precio:'',receta:[]};
+  let lines=p.receta.map(l=>({...l}));
+  openDlg(`<h3>${id?'Editar':'Nuevo'} producto</h3>
+   <label>Nombre (con presentación)<input name="nombre" value="${esc(p.nombre)}" required placeholder="Ej: Suavizante 1 L"></label>
+   <label>Precio de venta (Gs)<input name="precio" type="number" min="0" step="any" value="${p.precio||''}" required></label>
+   <h4>Receta (por unidad vendida)</h4><div id="lines"></div>
+   <button type="button" class="btn sm" id="addL">+ Agregar insumo</button>
+   <p class="mut" id="tot"></p>`,
+  fd=>{
+    p.nombre=fd.get('nombre').trim();p.precio=num(fd.get('precio'));
+    p.receta=lines.filter(l=>l.cantidad>0&&insumo(l.insumoId));
+    if(!id)S.productos.push({id:uid(),...p});
+    save();render();
+  },
+  d=>{
+    const f=$('form',d),box=$('#lines',d);
+    const upd=()=>{
+      const c=lines.reduce((a,l)=>a+l.cantidad*costoIns(insumo(l.insumoId)),0),pr=num(f.precio.value);
+      $('#tot',d).textContent=`Costo: ${fmt(c)} Gs · Ganancia: ${fmt(pr-c)} Gs`+(pr>0?` (${fmt2((pr-c)/pr*100)}%)`:'');
+    };
+    const draw=()=>{
+      box.innerHTML=lines.map((l,i)=>{const ins=insumo(l.insumoId);return `<div class="line" data-i="${i}">
+       <select data-k="insumoId">${S.insumos.map(x=>`<option value="${x.id}" ${x.id===l.insumoId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select>
+       <input type="number" data-k="cantidad" min="0" step="any" value="${l.cantidad||''}" placeholder="Cant.">
+       <span>${ins?esc(ins.unidad):''}</span><span class="c">${fmt2(l.cantidad*costoIns(ins))} Gs</span>
+       <button type="button" class="x" data-del="${i}">✕</button></div>`}).join('')||'<p class="mut">Sin insumos todavía.</p>';
+      upd();
+    };
+    box.oninput=e=>{
+      const row=e.target.closest('.line');if(!row||e.target.dataset.k!=='cantidad')return;
+      const l=lines[+row.dataset.i];l.cantidad=num(e.target.value);
+      $('.c',row).textContent=fmt2(l.cantidad*costoIns(insumo(l.insumoId)))+' Gs';upd();
+    };
+    box.onchange=e=>{
+      const row=e.target.closest('.line');if(!row||e.target.dataset.k!=='insumoId')return;
+      lines[+row.dataset.i].insumoId=e.target.value;draw();
+    };
+    box.onclick=e=>{const b=e.target.closest('[data-del]');if(b){lines.splice(+b.dataset.del,1);draw()}};
+    $('#addL',d).onclick=()=>{
+      if(!S.insumos.length){alert('Primero cargá insumos en "Materias primas".');return}
+      lines.push({insumoId:S.insumos[0].id,cantidad:0});draw();
+    };
+    f.precio.addEventListener('input',upd);
+    draw();
+  });
+}
+
+/* ---------- RESUMEN ---------- */
+function vResumen(){
+  const years=[...new Set([new Date().getFullYear(),...S.ventas.map(v=>+v.fecha.slice(0,4))])].sort((a,b)=>b-a);
+  if(!years.includes(anio))years.push(anio);
+  const ms=Array.from({length:12},()=>({u:0,v:0,c:0}));
+  const porProd={};
+  S.ventas.filter(v=>v.fecha.startsWith(String(anio))).forEach(v=>{
+    const m=+v.fecha.slice(5,7)-1,tot=v.cantidad*v.precio;
+    ms[m].u+=v.cantidad;ms[m].v+=tot;ms[m].c+=v.cantidad*v.costoUnit;
+    (porProd[v.productoId]=porProd[v.productoId]||Array(12).fill(0))[m]+=tot;
+  });
+  const T=ms.reduce((a,m)=>({u:a.u+m.u,v:a.v+m.v,c:a.c+m.c}),{u:0,v:0,c:0});
+  const max=Math.max(1,...ms.map(m=>m.v));
+  const W=720,H=220,pb=22,pt=8,gw=W/12,bh=H-pb-pt;
+  const bars=ms.map((m,i)=>{
+    const h1=m.v/max*bh,h2=Math.max(0,m.v-m.c)/max*bh,x=i*gw+gw*0.12,bw=gw*0.36;
+    return `<rect x="${x}" y="${pt+bh-h1}" width="${bw}" height="${h1}" rx="2" fill="var(--pri)"><title>${MESES[i]}: ventas ${fmt(m.v)} Gs</title></rect>
+    <rect x="${x+bw+2}" y="${pt+bh-h2}" width="${bw}" height="${h2}" rx="2" fill="var(--ok)"><title>${MESES[i]}: ganancia ${fmt(m.v-m.c)} Gs</title></rect>
+    <text x="${i*gw+gw/2}" y="${H-6}" text-anchor="middle">${MESES[i].slice(0,3)}</text>`}).join('');
+  $('#app').innerHTML=`
+  <section class="card"><div class="bar"><h2>Resumen del año</h2>
+    <label class="inl">Año <select id="anio">${years.map(y=>`<option ${y===anio?'selected':''}>${y}</option>`).join('')}</select></label></div>
+   <div class="kpis"><div class="kpi"><span>Ventas</span><b>${fmt(T.v)} Gs</b></div><div class="kpi"><span>Costo</span><b>${fmt(T.c)} Gs</b></div><div class="kpi"><span>Ganancia</span><b class="${cls(T.v-T.c)}">${fmt(T.v-T.c)} Gs</b></div><div class="kpi"><span>Margen</span><b>${T.v>0?fmt2((T.v-T.c)/T.v*100)+'%':'–'}</b></div></div>
+   <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Ventas y ganancia por mes">${bars}</svg>
+   <div class="legend"><span><i style="background:var(--pri)"></i>Ventas</span><span><i style="background:var(--ok)"></i>Ganancia</span></div></section>
+  <section class="card"><h2>Mes a mes</h2><div class="wrap"><table><thead><tr><th>Mes</th><th class="n">Unidades</th><th class="n">Ventas (Gs)</th><th class="n">Costo (Gs)</th><th class="n">Ganancia (Gs)</th><th class="n">Margen</th></tr></thead><tbody>${
+   ms.map((m,i)=>`<tr><td>${MESES[i]}</td><td class="n">${m.u?fmt2(m.u):'–'}</td><td class="n">${m.v?fmt(m.v):'–'}</td><td class="n">${m.c?fmt(m.c):'–'}</td><td class="n ${cls(m.v-m.c)}">${m.v?fmt(m.v-m.c):'–'}</td><td class="n">${m.v>0?fmt2((m.v-m.c)/m.v*100)+'%':'–'}</td></tr>`).join('')}</tbody>
+   <tfoot><tr><td>Total ${anio}</td><td class="n">${fmt2(T.u)}</td><td class="n">${fmt(T.v)}</td><td class="n">${fmt(T.c)}</td><td class="n">${fmt(T.v-T.c)}</td><td class="n">${T.v>0?fmt2((T.v-T.c)/T.v*100)+'%':'–'}</td></tr></tfoot></table></div></section>
+  <section class="card"><h2>Ventas por producto y mes (Gs)</h2>${Object.keys(porProd).length?`<div class="wrap"><table><thead><tr><th>Producto</th>${MESES.map(m=>`<th class="n">${m.slice(0,3)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>${
+   Object.entries(porProd).map(([id,a])=>{const p=producto(id);return `<tr><td>${p?esc(p.nombre):'(eliminado)'}</td>${a.map(x=>`<td class="n">${x?fmt(x):'–'}</td>`).join('')}<td class="n"><b>${fmt(a.reduce((s,x)=>s+x,0))}</b></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Sin ventas en este año.</div>'}</section>`;
+  $('#anio').onchange=e=>{anio=+e.target.value;vResumen()};
+}
+
+/* ---------- Respaldo ---------- */
+function descargar(nombre,contenido,tipo){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([contenido],{type:tipo}));a.download=nombre;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function exportar(){
+  descargar(`limpito-datos-${hoy()}.json`,JSON.stringify(S,null,2),'application/json');
+  meta.ultimoRespaldo=hoy();saveMeta();updRespaldo();
+}
+function csv(){
+  const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  const filas=[['Fecha','Producto','Cantidad','Precio unitario','Total','Costo unitario','Costo total','Ganancia','Nota']];
+  [...S.ventas].sort((a,b)=>a.fecha.localeCompare(b.fecha)).forEach(v=>{
+    const p=producto(v.productoId),t=v.cantidad*v.precio,c=v.cantidad*v.costoUnit;
+    filas.push([v.fecha,p?p.nombre:'(eliminado)',v.cantidad,v.precio,t,v.costoUnit,c,t-c,v.nota]);
+  });
+  descargar(`limpito-ventas-${hoy()}.csv`,'﻿'+filas.map(r=>r.map(q).join(',')).join('\n'),'text/csv');
+}
+$('#file').onchange=e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!Array.isArray(d.productos)||!Array.isArray(d.insumos)||!Array.isArray(d.ventas))throw 0;
+      if(!confirm('Esto reemplaza todos los datos actuales por los del respaldo. ¿Continuar?'))return;
+      S=d;save();render();
+    }catch(err){alert('El archivo no parece un respaldo válido de Limpito.')}
+  };
+  r.readAsText(f);
+};
+
+/* ---------- Acciones ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,id=b.dataset.id;
+  if(a==='tab')setTab(b.dataset.v);
+  else if(a==='export')exportar();
+  else if(a==='import')$('#file').click();
+  else if(a==='csv')csv();
+  else if(a==='nuevoInsumo')dInsumo();
+  else if(a==='editInsumo')dInsumo(id);
+  else if(a==='delInsumo'){
+    const usados=S.productos.filter(p=>p.receta.some(l=>l.insumoId===id)).map(p=>p.nombre);
+    if(usados.length){alert('No se puede borrar: lo usan estos productos: '+usados.join(', ')+'.');return}
+    if(confirm('¿Borrar este insumo?')){S.insumos=S.insumos.filter(i=>i.id!==id);save();render()}
+  }
+  else if(a==='nuevoProd')dProd();
+  else if(a==='editProd')dProd(id);
+  else if(a==='delProd'){
+    if(S.ventas.some(v=>v.productoId===id)){alert('No se puede borrar: tiene ventas registradas.');return}
+    if(confirm('¿Borrar este producto?')){S.productos=S.productos.filter(p=>p.id!==id);save();render()}
+  }
+  else if(a==='editVenta')dVenta(id);
+  else if(a==='delVenta'){if(confirm('¿Borrar esta venta?')){S.ventas=S.ventas.filter(v=>v.id!==id);save();tVentas()}}
+});
+
+render();
+</script>
+</body>
+</html>
